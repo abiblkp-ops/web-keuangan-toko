@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Laporan UMKM Penjualan Hari Ini</title>
+  <title>Laporan UMKM Penjualan</title>
   <style>
     * {
       box-sizing: border-box;
@@ -41,7 +41,7 @@
     }
 
     .card {
-      background-color: #cbd5e1; /* Warna abu-abu lembut sesuai sketsa */
+      background-color: #cbd5e1;
       border-radius: 16px;
       padding: 25px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
@@ -86,12 +86,39 @@
       transform: translateX(4px);
     }
 
-    /* KOTAK KANAN (TABEL & TOTAL) */
+    /* KOTAK KANAN (KALENDER, TABEL & TOTAL) */
+    .top-control {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      background: #ffffff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+
+    .top-control label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .date-picker {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1e293b;
+      outline: none;
+    }
+
     .content-header {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 800;
       color: #1e293b;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       text-align: center;
     }
 
@@ -100,7 +127,7 @@
       border-radius: 12px;
       padding: 15px;
       flex-grow: 1;
-      max-height: 350px;
+      max-height: 300px;
       overflow-y: auto;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
@@ -123,9 +150,9 @@
     }
 
     .total-section {
-      margin-top: 20px;
+      margin-top: 15px;
       background: #ffffff;
-      padding: 18px 20px;
+      padding: 15px 20px;
       border-radius: 12px;
       display: flex;
       justify-content: space-between;
@@ -134,20 +161,20 @@
     }
 
     .total-label {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 800;
       color: #1e293b;
     }
 
     .total-amount {
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 800;
       color: #0f172a;
     }
 
     .btn-download {
       display: block;
-      margin-top: 15px;
+      margin-top: 12px;
       text-align: center;
       padding: 12px;
       background-color: #0f172a;
@@ -181,8 +208,13 @@
       </div>
     </div>
 
-    <!-- KOTAK KANAN: TABEL DATA & TOTAL -->
+    <!-- KOTAK KANAN: KALENDER, TABEL & TOTAL -->
     <div class="card">
+      <div class="top-control">
+        <label for="reportDate">Pilih Tanggal Laporan:</label>
+        <input type="date" id="reportDate" class="date-picker" onchange="loadDataFromSheets()">
+      </div>
+
       <div class="content-header" id="branchTitle">LAPORAN LKP KAMPUS</div>
       
       <div class="table-box">
@@ -205,7 +237,8 @@
         <span class="total-amount" id="totalRp">Rp 0</span>
       </div>
 
-      <a href="https://docs.google.com/spreadsheets/d/1QWg5qBtzkDioTh0Mbfh692PN7y40Dm90uH3pSqXUtvIBT9UZJKvsExpDzYfwA2c_uLdg62Ygt2rPid/export?format=xlsx" class="btn-download">DOWNLOAD FILE EXCEL</a>
+      <!-- Link download langsung mengarah ke export Excel xlsx -->
+      <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQWg5qBtzkDioTh0Mbfh692PN7y40Dm90uH3pSqXUtvIBT9UZJKvsExpDzYfwA2c_uLdg62Ygt2rPid/pub?output=xlsx" class="btn-download" id="downloadExcelBtn">DOWNLOAD FILE EXCEL</a>
     </div>
   </div>
 
@@ -213,7 +246,16 @@
     // Link CSV Publikasi Google Sheets Anda
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQWg5qBtzkDioTh0Mbfh692PN7y40Dm90uH3pSqXUtvIBT9UZJKvsExpDzYfwA2c_uLdg62Ygt2rPid/pub?gid=1557521920&single=true&output=csv";
 
-    // Fungsi membaca CSV mentah dari Google Sheets
+    let currentBranchKey = 'kampus';
+    let currentBranchName = 'LKP KAMPUS';
+
+    // Set tanggal default hari ini ke kalender saat web dibuka
+    document.addEventListener("DOMContentLoaded", () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('reportDate').value = today;
+      loadDataFromSheets();
+    });
+
     function parseCSV(text) {
       let lines = text.split('\n');
       return lines.map(line => {
@@ -236,6 +278,9 @@
     }
 
     async function loadDataFromSheets() {
+      const selectedDate = document.getElementById('reportDate').value;
+      console.log("Melihat laporan untuk tanggal:", selectedDate);
+
       try {
         const response = await fetch(SHEET_CSV_URL);
         const csvText = await response.text();
@@ -244,16 +289,16 @@
         let tableHTML = '';
         let totalOmzet = 0;
 
-        // Membaca baris data (dimulai dari baris ke-5 tabel Google Sheets Anda)
+        // Membaca baris data dari Google Sheets (mulai dari baris ke-5 / index 4)
         for (let i = 4; i < rows.length; i++) {
           const row = rows[i];
           if (!row || row.length < 3) continue;
 
           const varian = row[1]; // Kolom B: Varian Produk
           
-          // Mengambil data terupdate (misal dari kolom 3 Nov: Laku = Kolom J/index 9, Total = Kolom K/index 10)
-          const laku = row[9] || row[3] || 0; // Kolom Laku
-          const totalStr = row[10] || row[4] || "0"; // Kolom Total (Rp)
+          // Contoh pengambilan data (bisa disesuaikan dengan kolom tanggal di spreadsheet Anda)
+          const laku = row[9] || row[3] || 0; 
+          const totalStr = row[10] || row[4] || "0"; 
 
           if (varian && varian !== "" && varian.toUpperCase() !== "TOTAL") {
             const cleanTotal = parseInt(totalStr.replace(/[^0-9]/g, '')) || 0;
@@ -272,7 +317,7 @@
           }
         }
 
-        document.getElementById('tableBody').innerHTML = tableHTML || '<tr><td colspan="3" style="text-align:center;">Belum ada item laku hari ini</td></tr>';
+        document.getElementById('tableBody').innerHTML = tableHTML || '<tr><td colspan="3" style="text-align:center;">Belum ada item laku pada tanggal ini</td></tr>';
         document.getElementById('totalRp').innerText = `Rp ${totalOmzet.toLocaleString('id-ID')}`;
 
       } catch (error) {
@@ -285,19 +330,12 @@
       document.querySelectorAll('.branch-btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
 
+      currentBranchKey = branchKey;
+      currentBranchName = branchName;
       document.getElementById('branchTitle').innerText = `LAPORAN ${branchName}`;
 
-      if (branchKey === 'kampus') {
-        loadDataFromSheets();
-      } else {
-        // Cabang lain yang belum dihubungkan ke sheetnya
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;">Belum ada data untuk cabang ini</td></tr>';
-        document.getElementById('totalRp').innerText = 'Rp 0';
-      }
+      loadDataFromSheets();
     }
-
-    // Muat awal untuk cabang Kampus
-    loadDataFromSheets();
   </script>
 </body>
 </html>
