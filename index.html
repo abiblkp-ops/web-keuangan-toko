@@ -4,38 +4,239 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Laporan UMKM Penjualan</title>
-  <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-    body { background-color: #f0f4f8; padding: 30px 20px; }
-    .main-title { text-align: center; font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 25px; text-transform: uppercase; }
-    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 25px; }
-    @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
-    .card { background-color: #cbd5e1; border-radius: 16px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; }
-    h2 { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; color: #1e293b; margin-bottom: 20px; text-align: center; letter-spacing: 0.5px; }
-    
-    .branch-list { display: flex; flex-direction: column; gap: 12px; }
-    .branch-btn { background-color: #ffffff; border: none; padding: 15px 20px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; color: #334155; text-align: left; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.03); transition: all 0.2s ease; }
-    .branch-btn:hover, .branch-btn.active { background-color: #2563eb; color: #ffffff; transform: translateX(4px); }
-    
-    .top-control { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #ffffff; padding: 10px 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); gap: 10px; flex-wrap: wrap; }
-    .top-control label { font-size: 0.85rem; font-weight: 700; color: #334155; }
-    .date-picker { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.85rem; font-weight: 600; color: #1e293b; outline: none; }
-    
-    .ai-btn { background-color: #8b5cf6; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; }
-    .ai-btn:hover { background-color: #7c3aed; }
 
-    .content-header { font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; text-align: center; }
-    .table-box { background: #ffffff; border-radius: 12px; padding: 15px; flex-grow: 1; max-height: 350px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background-color: #f8fafc; font-weight: 700; }
-    
-    .total-section { margin-top: 15px; background: #ffffff; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-    .total-label { font-size: 0.95rem; font-weight: 800; color: #1e293b; }
-    .total-amount { font-size: 1.2rem; font-weight: 800; color: #0f172a; }
-    
-    .btn-download { display: block; margin-top: 12px; text-align: center; padding: 12px; background-color: #0f172a; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.9rem; border-radius: 10px; transition: background 0.2s; }
-    .btn-download:hover { background-color: #334155; }
+  <!-- Library OCR (Tesseract.js) untuk membaca tulisan di foto -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f0f4f8;
+      padding: 30px 20px;
+    }
+
+    .main-title {
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 25px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background-color: #cbd5e1;
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #1e293b;
+      margin-bottom: 20px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    /* TOMBOL CABANG (KIRI) */
+    .branch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .branch-btn {
+      background-color: #ffffff;
+      border: none;
+      padding: 15px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #334155;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+      transition: all 0.2s ease;
+    }
+
+    .branch-btn:hover, .branch-btn.active {
+      background-color: #2563eb;
+      color: #ffffff;
+      transform: translateX(4px);
+    }
+
+    /* KOTAK KANAN */
+    .top-control {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      background: #ffffff;
+      padding: 10px 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .top-control label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .date-picker {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1e293b;
+      outline: none;
+    }
+
+    /* FITUR UPLOAD FOTO */
+    .ocr-box {
+      background: #e2e8f0;
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .btn-camera {
+      display: inline-block;
+      background-color: #0284c7;
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-camera:hover {
+      background-color: #0369a1;
+    }
+
+    .ocr-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 8px;
+      color: #334155;
+    }
+
+    .content-header {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .table-box {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 15px;
+      flex-grow: 1;
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: 700;
+    }
+
+    /* Editable cell styling */
+    td[contenteditable="true"] {
+      outline: none;
+    }
+    td[contenteditable="true"]:focus {
+      background-color: #fef08a;
+      border-radius: 4px;
+    }
+
+    .total-section {
+      margin-top: 15px;
+      background: #ffffff;
+      padding: 15px 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .total-label {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    .total-amount {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .btn-download {
+      display: block;
+      margin-top: 12px;
+      text-align: center;
+      padding: 12px;
+      background-color: #0f172a;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+
+    .btn-download:hover {
+      background-color: #334155;
+    }
   </style>
 </head>
 <body>
@@ -43,31 +244,30 @@
   <div class="main-title">Laporan UMKM Penjualan Hari Ini</div>
 
   <div class="container">
-    <!-- KOTAK KIRI: PILIHAN CABANG -->
+    <!-- KOTAK KIRI -->
     <div class="card">
       <h2>Pilih Cabang</h2>
       <div class="branch-list">
-        <button class="branch-btn active" onclick="switchBranch('kampus', 'LKP KAMPUS', event)">LKP KAMPUS</button>
-        <button class="branch-btn" onclick="switchBranch('suhat', 'LKP SUHAT', event)">LKP SUHAT</button>
-        <button class="branch-btn" onclick="switchBranch('glaser', 'LKP GLASER', event)">LKP GLASER</button>
-        <button class="branch-btn" onclick="switchBranch('lumajang', 'LKP LUMAJANG', event)">LKP LUMAJANG</button>
-        <button class="branch-btn" onclick="switchBranch('mangli', 'LKP MANGLI', event)">LKP MANGLI</button>
+        <button class="branch-btn active" onclick="switchBranch(event, 'kampus', 'LKP KAMPUS')">LKP KAMPUS</button>
+        <button class="branch-btn" onclick="switchBranch(event, 'suhat', 'LKP SUHAT')">LKP SUHAT</button>
+        <button class="branch-btn" onclick="switchBranch(event, 'glaser', 'LKP GLASER')">LKP GLASER</button>
+        <button class="branch-btn" onclick="switchBranch(event, 'lumajang', 'LKP LUMAJANG')">LKP LUMAJANG</button>
+        <button class="branch-btn" onclick="switchBranch(event, 'mangli', 'LKP MANGLI')">LKP MANGLI</button>
       </div>
     </div>
 
-    <!-- KOTAK KANAN: KALENDER, SCAN AI, TABEL & TOTAL -->
+    <!-- KOTAK KANAN -->
     <div class="card">
       <div class="top-control">
-        <div>
-          <label for="reportDate">Pilih Tanggal Laporan:</label>
-          <input type="date" id="reportDate" class="date-picker" onchange="loadDataFromSheets()">
-        </div>
-        
-        <!-- FITUR SCAN TABEL KERTAS PAKAI AI -->
-        <div>
-          <input type="file" id="aiFileInput" accept="image/*" capture="environment" style="display:none;" onchange="processPaperWithAI(this)">
-          <button class="ai-btn" onclick="document.getElementById('aiFileInput').click()">📷 Scan Kertas dengan AI</button>
-        </div>
+        <label for="reportDate">Pilih Tanggal Laporan:</label>
+        <input type="date" id="reportDate" class="date-picker">
+      </div>
+
+      <!-- FITUR UPLOAD FOTO / NOTA -->
+      <div class="ocr-box">
+        <label for="imageInput" class="btn-camera">📷 Upload Foto / Ambil Foto Nota</label>
+        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="processImage(event)">
+        <div class="ocr-status" id="ocrStatus">Pilih foto nota/struk untuk mengisi tabel otomatis</div>
       </div>
 
       <div class="content-header" id="branchTitle">LAPORAN LKP KAMPUS</div>
@@ -82,7 +282,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="3" style="text-align:center;">Memuat data...</td></tr>
+            <tr><td colspan="3" style="text-align:center;">Belum ada data. Silakan upload foto nota.</td></tr>
           </tbody>
         </table>
       </div>
@@ -92,182 +292,127 @@
         <span class="total-amount" id="totalRp">Rp 0</span>
       </div>
 
-      <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQWg5qBtzkDioTh0Mbfh692PN7y40Dm90uH3pSqXUtvIBT9UZJKvsExpDzYfwA2c_uLdg62Ygt2rPid/pub?output=xlsx" class="btn-download" id="downloadExcelBtn">DOWNLOAD FILE EXCEL</a>
+      <a href="javascript:void(0)" class="btn-download" onclick="alert('Fitur download dapat dihubungkan ke excel')">DOWNLOAD FILE EXCEL</a>
     </div>
   </div>
 
   <script>
-    // Link CSV Publikasi Google Sheets Anda
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQWg5qBtzkDioTh0Mbfh692PN7y40Dm90uH3pSqXUtvIBT9UZJKvsExpDzYfwA2c_uLdg62Ygt2rPid/pub?gid=1557521920&single=true&output=csv";
-
     let currentBranchKey = 'kampus';
     let currentBranchName = 'LKP KAMPUS';
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Set default tanggal 1 November 2026 sesuai contoh Excel Anda
-      document.getElementById('reportDate').value = '2026-11-01';
-      loadDataFromSheets();
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('reportDate').value = today;
     });
 
-    function parseCSV(text) {
-      let lines = text.split('\n');
-      return lines.map(line => {
-        let values = [];
-        let insideQuote = false;
-        let value = '';
-        for (let char of line) {
-          if (char === '"') insideQuote = !insideQuote;
-          else if (char === ',' && !insideQuote) { values.push(value.trim()); value = ''; }
-          else value += char;
-        }
-        values.push(value.trim());
-        return values;
-      });
-    }
+    // FUNGSI OCR: MEMPROSES FOTO MENJADI DATA TABEL
+    async function processImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    async function loadDataFromSheets() {
-      const selectedDate = document.getElementById('reportDate').value; // Format: YYYY-MM-DD
-      if (!selectedDate) return;
-
-      const dateObj = new Date(selectedDate);
-      const day = dateObj.getDate();
-      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-      const formattedTargetDate = `${day} ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+      const statusEl = document.getElementById('ocrStatus');
+      statusEl.style.color = "#0284c7";
+      statusEl.innerText = "Membaca teks dari gambar... Mohon tunggu.";
 
       try {
-        const response = await fetch(SHEET_CSV_URL);
-        if (!response.ok) throw new Error("Akses CSV Gagal");
-        const csvText = await response.text();
-        const rows = parseCSV(csvText);
-
-        // Cari indeks kolom tanggal di baris ke-2 (index 1 di Excel)
-        let lakuColIdx = -1;
-        let totalColIdx = -1;
-
-        if (rows.length > 1) {
-          const headerRow = rows[1];
-          for (let c = 0; c < headerRow.length; c++) {
-            if (headerRow[c].includes(formattedTargetDate)) {
-              lakuColIdx = c;       // Kolom Laku
-              totalColIdx = c + 1;  // Kolom Total (Rp)
-              break;
+        // Tesseract membaca teks dari file foto
+        const result = await Tesseract.recognize(
+          file,
+          'ind', // Bahasa Indonesia
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                statusEl.innerText = `Memproses: ${Math.round(m.progress * 100)}%`;
+              }
             }
           }
-        }
+        );
 
-        // Jika tanggal tidak ditemukan di header Excel
-        if (lakuColIdx === -1) {
-          document.getElementById('tableBody').innerHTML = `<tr><td colspan="3" style="text-align:center;">Data untuk tanggal <b>${formattedTargetDate}</b> tidak ditemukan di spreadsheet.</td></tr>`;
-          document.getElementById('totalRp').innerText = 'Rp 0';
-          return;
-        }
+        const text = result.data.text;
+        statusEl.style.color = "green";
+        statusEl.innerText = "Selesai! Data berhasil diekstrak ke tabel.";
+        
+        parseReceiptToTable(text);
 
-        let tableHTML = '';
-        let totalOmzet = 0;
+      } catch (error) {
+        console.error(error);
+        statusEl.style.color = "red";
+        statusEl.innerText = "Gagal memproses gambar. Pastikan foto cukup jelas dan terang.";
+      }
+    }
 
-        // Baca data produk mulai baris ke-4 (index 3)
-        for (let i = 3; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.length < 2) continue;
+    // MEMBEDAH TEKS DARI NOTA MENJADI BARIS TABEL
+    function parseReceiptToTable(text) {
+      const lines = text.split('\n');
+      let tableHTML = '';
+      let grandTotal = 0;
 
-          const varian = row[1]; // Kolom B: Varian Produk
-          if (!varian || varian === "" || varian.toUpperCase() === "TOTAL") continue;
+      lines.forEach(line => {
+        let cleanLine = line.trim();
+        if (cleanLine.length < 3) return;
 
-          const lakuStr = row[lakuColIdx] || "0";
-          const totalStr = row[totalColIdx] || "0";
+        // Mencari format: [Nama Barang] [Qty/Jumlah] [Harga/Total]
+        // Contoh: "Kopi Susu 2 30000" atau "Roti Manis 1 Rp 15.000"
+        const numbers = cleanLine.match(/\d+([.,]\d+)?/g);
 
-          const cleanLaku = parseInt(lakuStr.replace(/[^0-9]/g, '')) || 0;
-          const cleanTotal = parseInt(totalStr.replace(/[^0-9]/g, '')) || 0;
+        if (numbers && numbers.length >= 1) {
+          // Angka terakhir kemungkinan adalah total harga
+          let rawPrice = numbers[numbers.length - 1].replace(/[.,]/g, '');
+          let price = parseInt(rawPrice) || 0;
 
-          if (cleanLaku > 0 || cleanTotal > 0) {
-            totalOmzet += cleanTotal;
+          // Angka sebelum harga (jika ada) dianggap Qty/Laku
+          let qty = numbers.length >= 2 ? parseInt(numbers[numbers.length - 2]) : 1;
+
+          // Sisa teks dianggap Nama Varian/Produk
+          let productName = cleanLine
+            .replace(/[0-9.,]/g, '')
+            .replace(/rp|total|pcs|x/gi, '')
+            .trim();
+
+          if (productName.length > 1 && price > 0) {
+            grandTotal += price;
             tableHTML += `
               <tr>
-                <td>${varian}</td>
-                <td>${cleanLaku}</td>
-                <td>Rp ${cleanTotal.toLocaleString('id-ID')}</td>
+                <td contenteditable="true" oninput="recalculateTotal()">${productName}</td>
+                <td contenteditable="true" oninput="recalculateTotal()">${qty}</td>
+                <td contenteditable="true" oninput="recalculateTotal()">Rp ${price.toLocaleString('id-ID')}</td>
               </tr>
             `;
           }
         }
+      });
 
-        document.getElementById('tableBody').innerHTML = tableHTML || '<tr><td colspan="3" style="text-align:center;">Belum ada item laku pada tanggal ini</td></tr>';
-        document.getElementById('totalRp').innerText = `Rp ${totalOmzet.toLocaleString('id-ID')}`;
-
-      } catch (error) {
-        console.error("Gagal mengambil data:", error);
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Gagal memuat data dari Google Sheets. Pastikan Spreadsheet sudah di-Publish to Web (Format CSV).</td></tr>';
+      if (tableHTML) {
+        document.getElementById('tableBody').innerHTML = tableHTML;
+        document.getElementById('totalRp').innerText = `Rp ${grandTotal.toLocaleString('id-ID')}`;
+      } else {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="text-align:center; color:orange;">Format teks tidak terbaca jelas. Pastikan foto nota tegak dan fokus.</td></tr>';
       }
     }
 
-    function switchBranch(branchKey, branchName, evt) {
+    // HITUNG ULANG OTOMATIS JIKA USER MENGEDIT TABEL MANUAL
+    function recalculateTotal() {
+      const rows = document.querySelectorAll('#tableBody tr');
+      let newTotal = 0;
+
+      rows.forEach(row => {
+        const priceCell = row.cells[2];
+        if (priceCell) {
+          const rawNum = priceCell.innerText.replace(/[^0-9]/g, '');
+          newTotal += parseInt(rawNum) || 0;
+        }
+      });
+
+      document.getElementById('totalRp').innerText = `Rp ${newTotal.toLocaleString('id-ID')}`;
+    }
+
+    function switchBranch(event, branchKey, branchName) {
       document.querySelectorAll('.branch-btn').forEach(btn => btn.classList.remove('active'));
-      evt.target.classList.add('active');
+      event.target.classList.add('active');
 
       currentBranchKey = branchKey;
       currentBranchName = branchName;
       document.getElementById('branchTitle').innerText = `LAPORAN ${branchName}`;
-      loadDataFromSheets();
-    }
-
-    // ==========================================
-    // FITUR INTEGRASI SCAN AI (GEMINI API)
-    // ==========================================
-    async function processPaperWithAI(inputElement) {
-      const file = inputElement.files[0];
-      if (!file) return;
-
-      document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;">🤖 AI sedang membaca tabel kertas Anda... Mohon tunggu.</td></tr>';
-
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-
-      // Ganti dengan Gemini API Key Anda dari Google AI Studio
-      const GEMINI_API_KEY = "MASUKKAN_GEMINI_API_KEY_ANDA_DISINI"; 
-      
-      const prompt = `Ekstrak data dari tabel kertas laporan penjualan ini. Kembalikan data HANYA dalam format JSON array seperti ini:
-      [{"varian": "nama produk", "laku": 5, "total": 50000}]`;
-
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64 } }] }]
-          })
-        });
-
-        const data = await res.json();
-        const responseText = data.candidates[0].content.parts[0].text;
-        const cleanJsonText = responseText.replace(/```json|```/g, '').trim();
-        const parsedItems = JSON.parse(cleanJsonText);
-
-        let tableHTML = '';
-        let totalOmzet = 0;
-
-        parsedItems.forEach(item => {
-          totalOmzet += item.total;
-          tableHTML += `
-            <tr>
-              <td>${item.varian}</td>
-              <td>${item.laku}</td>
-              <td>Rp ${item.total.toLocaleString('id-ID')}</td>
-            </tr>
-          `;
-        });
-
-        document.getElementById('tableBody').innerHTML = tableHTML;
-        document.getElementById('totalRp').innerText = `Rp ${totalOmzet.toLocaleString('id-ID')}`;
-        alert("Berhasil membaca tabel kertas dengan AI!");
-
-      } catch (err) {
-        console.error(err);
-        alert("Gagal membaca gambar dengan AI. Pastikan API Key diisi dan foto jelas.");
-        loadDataFromSheets();
-      }
     }
   </script>
 </body>
