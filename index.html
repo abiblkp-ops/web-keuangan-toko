@@ -133,11 +133,11 @@
     }
 
     .api-input {
-      padding: 6px 12px;
+      padding: 8px 12px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      width: 250px;
-      font-size: 0.8rem;
+      width: 280px;
+      font-size: 0.85rem;
     }
 
     .btn-camera {
@@ -257,7 +257,7 @@
         </div>
         <label for="imageInput" class="btn-camera">📸 Foto / Upload Nota (AI Scan)</label>
         <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="processWithGemini(event)">
-        <div class="ocr-status" id="ocrStatus">Masukkan API Key Gemini sekali, lalu upload foto nota.</div>
+        <div class="ocr-status" id="ocrStatus">Kunci API otomatis tersimpan di browser Anda.</div>
       </div>
 
       <div class="content-header" id="branchTitle">LAPORAN LKP KAMPUS</div>
@@ -299,7 +299,7 @@
       localStorage.setItem('GEMINI_KEY', key);
     }
 
-    // Convert file ke format Base64 untuk AI
+    // Ubah file gambar ke Base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -329,19 +329,20 @@
       try {
         const base64Image = await fileToBase64(file);
 
-        const prompt = `Analisis foto nota/struk/laporan ini.
-Ekstrak semua baris produk yang terjual ke format JSON Array murni.
-Format harus persis seperti ini:
+        const prompt = `Analisis foto nota/struk/laporan penjualan ini.
+Ekstrak daftar produk terjual ke format JSON Array murni.
+Format harus berupa array objek:
 [
   {"produk": "Nama Barang", "laku": 1, "total": 15000}
 ]
-Aturan:
-- Jangan sertakan baris tulisan "TOTAL" / "SUBTOTAL" ke dalam list produk.
-- "laku" harus berupa angka (jumlah qty). Jika tidak tertulis qty-nya, isi 1.
-- "total" harus berupa angka nominal rupiah bersih tanpa titik/koma/Rp.
-- Hanya kembalikan JSON valid, jangan ada teks pembuka atau markdown lainnya.`;
+Aturan penting:
+- Jangan masukkan kata "TOTAL", "SUBTOTAL", atau "KEMBALIAN" ke daftar produk.
+- "laku" harus berupa angka (Qty). Jika di nota tidak tertulis jumlahnya, isi 1.
+- "total" harus berupa angka nominal rupiah bersih tanpa Rp/titik/koma.
+- Hanya kembalikan teks JSON valid tanpa pembuka/penutup markdown.`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        // Menggunakan endpoint v1 yang stabil
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -367,14 +368,14 @@ Aturan:
 
         let rawReply = data.candidates[0].content.parts[0].text;
         
-        // Membersihkan jika ada sisa tag markdown json
+        // Membersihkan formatting markdown jika ada
         rawReply = rawReply.replace(/```json/gi, '').replace(/```/g, '').trim();
 
         const items = JSON.parse(rawReply);
         renderTable(items);
 
         statusEl.style.color = "green";
-        statusEl.innerText = "✅ Selesai! Data berhasil dibaca dengan akurat.";
+        statusEl.innerText = "✅ Selesai! Data berhasil dibaca dengan rapi.";
 
       } catch (err) {
         console.error(err);
