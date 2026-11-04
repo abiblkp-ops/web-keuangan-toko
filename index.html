@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Laporan UMKM Penjualan</title>
 
-  <!-- Library OCR (Tesseract.js) untuk membaca tulisan di foto -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
   <style>
     * {
       box-sizing: border-box;
@@ -63,7 +60,6 @@
       letter-spacing: 0.5px;
     }
 
-    /* TOMBOL CABANG (KIRI) */
     .branch-list {
       display: flex;
       flex-direction: column;
@@ -90,7 +86,6 @@
       transform: translateX(4px);
     }
 
-    /* KOTAK KANAN */
     .top-control {
       display: flex;
       justify-content: space-between;
@@ -120,21 +115,36 @@
       outline: none;
     }
 
-    /* FITUR UPLOAD FOTO */
+    /* AREA UPLOAD AI */
     .ocr-box {
-      background: #e2e8f0;
-      border: 2px dashed #94a3b8;
+      background: #ffffff;
+      border: 2px dashed #3b82f6;
       border-radius: 12px;
-      padding: 15px;
+      padding: 18px;
       text-align: center;
       margin-bottom: 15px;
     }
 
+    .api-input-wrap {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .api-input {
+      padding: 6px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      width: 250px;
+      font-size: 0.8rem;
+    }
+
     .btn-camera {
       display: inline-block;
-      background-color: #0284c7;
+      background-color: #2563eb;
       color: #ffffff;
-      padding: 10px 20px;
+      padding: 10px 22px;
       border-radius: 8px;
       font-weight: 700;
       font-size: 0.9rem;
@@ -143,14 +153,14 @@
     }
 
     .btn-camera:hover {
-      background-color: #0369a1;
+      background-color: #1d4ed8;
     }
 
     .ocr-status {
       font-size: 0.85rem;
       font-weight: 600;
-      margin-top: 8px;
-      color: #334155;
+      margin-top: 10px;
+      color: #475569;
     }
 
     .content-header {
@@ -188,12 +198,9 @@
       font-weight: 700;
     }
 
-    /* Editable cell styling */
-    td[contenteditable="true"] {
-      outline: none;
-    }
     td[contenteditable="true"]:focus {
       background-color: #fef08a;
+      outline: none;
       border-radius: 4px;
     }
 
@@ -219,24 +226,6 @@
       font-weight: 800;
       color: #0f172a;
     }
-
-    .btn-download {
-      display: block;
-      margin-top: 12px;
-      text-align: center;
-      padding: 12px;
-      background-color: #0f172a;
-      color: #ffffff;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      border-radius: 10px;
-      transition: background 0.2s;
-    }
-
-    .btn-download:hover {
-      background-color: #334155;
-    }
   </style>
 </head>
 <body>
@@ -244,7 +233,6 @@
   <div class="main-title">Laporan UMKM Penjualan Hari Ini</div>
 
   <div class="container">
-    <!-- KOTAK KIRI -->
     <div class="card">
       <h2>Pilih Cabang</h2>
       <div class="branch-list">
@@ -256,18 +244,20 @@
       </div>
     </div>
 
-    <!-- KOTAK KANAN -->
     <div class="card">
       <div class="top-control">
         <label for="reportDate">Pilih Tanggal Laporan:</label>
         <input type="date" id="reportDate" class="date-picker">
       </div>
 
-      <!-- FITUR UPLOAD FOTO / NOTA -->
+      <!-- AREA UPLOAD FOTO DENGAN AI GEMINI -->
       <div class="ocr-box">
-        <label for="imageInput" class="btn-camera">📷 Upload Foto / Ambil Foto Nota</label>
-        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="processImage(event)">
-        <div class="ocr-status" id="ocrStatus">Pilih foto nota/struk untuk mengisi tabel otomatis</div>
+        <div class="api-input-wrap">
+          <input type="password" id="geminiApiKey" class="api-input" placeholder="Tempel Gemini API Key di sini" onchange="saveApiKey()">
+        </div>
+        <label for="imageInput" class="btn-camera">📸 Foto / Upload Nota (AI Scan)</label>
+        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="processWithGemini(event)">
+        <div class="ocr-status" id="ocrStatus">Masukkan API Key Gemini sekali, lalu upload foto nota.</div>
       </div>
 
       <div class="content-header" id="branchTitle">LAPORAN LKP KAMPUS</div>
@@ -282,7 +272,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="3" style="text-align:center;">Belum ada data. Silakan upload foto nota.</td></tr>
+            <tr><td colspan="3" style="text-align:center;">Belum ada data. Upload foto nota untuk auto-generate.</td></tr>
           </tbody>
         </table>
       </div>
@@ -291,127 +281,143 @@
         <span class="total-label">TOTAL RP</span>
         <span class="total-amount" id="totalRp">Rp 0</span>
       </div>
-
-      <a href="javascript:void(0)" class="btn-download" onclick="alert('Fitur download dapat dihubungkan ke excel')">DOWNLOAD FILE EXCEL</a>
     </div>
   </div>
 
   <script>
-    let currentBranchKey = 'kampus';
-    let currentBranchName = 'LKP KAMPUS';
-
+    // Load default tanggal dan API key yang tersimpan
     document.addEventListener("DOMContentLoaded", () => {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('reportDate').value = today;
+      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+      const savedKey = localStorage.getItem('GEMINI_KEY');
+      if (savedKey) {
+        document.getElementById('geminiApiKey').value = savedKey;
+      }
     });
 
-    // FUNGSI OCR: MEMPROSES FOTO MENJADI DATA TABEL
-    async function processImage(event) {
+    function saveApiKey() {
+      const key = document.getElementById('geminiApiKey').value.trim();
+      localStorage.setItem('GEMINI_KEY', key);
+    }
+
+    // Convert file ke format Base64 untuk AI
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    async function processWithGemini(event) {
       const file = event.target.files[0];
       if (!file) return;
 
+      const apiKey = document.getElementById('geminiApiKey').value.trim();
       const statusEl = document.getElementById('ocrStatus');
-      statusEl.style.color = "#0284c7";
-      statusEl.innerText = "Membaca teks dari gambar... Mohon tunggu.";
+
+      if (!apiKey) {
+        alert("Harap masukkan Gemini API Key terlebih dahulu!");
+        statusEl.innerText = "Error: API Key Gemini belum diisi.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      statusEl.style.color = "#2563eb";
+      statusEl.innerText = "⏳ Sedang membaca nota menggunakan Google AI...";
 
       try {
-        // Tesseract membaca teks dari file foto
-        const result = await Tesseract.recognize(
-          file,
-          'ind', // Bahasa Indonesia
-          {
-            logger: m => {
-              if (m.status === 'recognizing text') {
-                statusEl.innerText = `Memproses: ${Math.round(m.progress * 100)}%`;
-              }
-            }
-          }
-        );
+        const base64Image = await fileToBase64(file);
 
-        const text = result.data.text;
-        statusEl.style.color = "green";
-        statusEl.innerText = "Selesai! Data berhasil diekstrak ke tabel.";
+        const prompt = `Analisis foto nota/struk/laporan ini.
+Ekstrak semua baris produk yang terjual ke format JSON Array murni.
+Format harus persis seperti ini:
+[
+  {"produk": "Nama Barang", "laku": 1, "total": 15000}
+]
+Aturan:
+- Jangan sertakan baris tulisan "TOTAL" / "SUBTOTAL" ke dalam list produk.
+- "laku" harus berupa angka (jumlah qty). Jika tidak tertulis qty-nya, isi 1.
+- "total" harus berupa angka nominal rupiah bersih tanpa titik/koma/Rp.
+- Hanya kembalikan JSON valid, jangan ada teks pembuka atau markdown lainnya.`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                {
+                  inline_data: {
+                    mime_type: file.type || "image/jpeg",
+                    data: base64Image
+                  }
+                }
+              ]
+            }]
+          })
+        });
+
+        const data = await response.json();
         
-        parseReceiptToTable(text);
+        if (data.error) {
+          throw new Error(data.error.message);
+        }
 
-      } catch (error) {
-        console.error(error);
+        let rawReply = data.candidates[0].content.parts[0].text;
+        
+        // Membersihkan jika ada sisa tag markdown json
+        rawReply = rawReply.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+        const items = JSON.parse(rawReply);
+        renderTable(items);
+
+        statusEl.style.color = "green";
+        statusEl.innerText = "✅ Selesai! Data berhasil dibaca dengan akurat.";
+
+      } catch (err) {
+        console.error(err);
         statusEl.style.color = "red";
-        statusEl.innerText = "Gagal memproses gambar. Pastikan foto cukup jelas dan terang.";
+        statusEl.innerText = "Gagal memproses gambar: " + err.message;
       }
     }
 
-    // MEMBEDAH TEKS DARI NOTA MENJADI BARIS TABEL
-    function parseReceiptToTable(text) {
-      const lines = text.split('\n');
-      let tableHTML = '';
-      let grandTotal = 0;
+    function renderTable(items) {
+      let html = '';
+      let totalSemua = 0;
 
-      lines.forEach(line => {
-        let cleanLine = line.trim();
-        if (cleanLine.length < 3) return;
+      items.forEach(item => {
+        const total = parseInt(item.total) || 0;
+        const laku = parseInt(item.laku) || 1;
+        totalSemua += total;
 
-        // Mencari format: [Nama Barang] [Qty/Jumlah] [Harga/Total]
-        // Contoh: "Kopi Susu 2 30000" atau "Roti Manis 1 Rp 15.000"
-        const numbers = cleanLine.match(/\d+([.,]\d+)?/g);
-
-        if (numbers && numbers.length >= 1) {
-          // Angka terakhir kemungkinan adalah total harga
-          let rawPrice = numbers[numbers.length - 1].replace(/[.,]/g, '');
-          let price = parseInt(rawPrice) || 0;
-
-          // Angka sebelum harga (jika ada) dianggap Qty/Laku
-          let qty = numbers.length >= 2 ? parseInt(numbers[numbers.length - 2]) : 1;
-
-          // Sisa teks dianggap Nama Varian/Produk
-          let productName = cleanLine
-            .replace(/[0-9.,]/g, '')
-            .replace(/rp|total|pcs|x/gi, '')
-            .trim();
-
-          if (productName.length > 1 && price > 0) {
-            grandTotal += price;
-            tableHTML += `
-              <tr>
-                <td contenteditable="true" oninput="recalculateTotal()">${productName}</td>
-                <td contenteditable="true" oninput="recalculateTotal()">${qty}</td>
-                <td contenteditable="true" oninput="recalculateTotal()">Rp ${price.toLocaleString('id-ID')}</td>
-              </tr>
-            `;
-          }
-        }
+        html += `
+          <tr>
+            <td contenteditable="true" oninput="recalc()">${item.produk}</td>
+            <td contenteditable="true" oninput="recalc()">${laku}</td>
+            <td contenteditable="true" oninput="recalc()">Rp ${total.toLocaleString('id-ID')}</td>
+          </tr>
+        `;
       });
 
-      if (tableHTML) {
-        document.getElementById('tableBody').innerHTML = tableHTML;
-        document.getElementById('totalRp').innerText = `Rp ${grandTotal.toLocaleString('id-ID')}`;
-      } else {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3" style="text-align:center; color:orange;">Format teks tidak terbaca jelas. Pastikan foto nota tegak dan fokus.</td></tr>';
-      }
+      document.getElementById('tableBody').innerHTML = html;
+      document.getElementById('totalRp').innerText = `Rp ${totalSemua.toLocaleString('id-ID')}`;
     }
 
-    // HITUNG ULANG OTOMATIS JIKA USER MENGEDIT TABEL MANUAL
-    function recalculateTotal() {
+    function recalc() {
       const rows = document.querySelectorAll('#tableBody tr');
-      let newTotal = 0;
-
-      rows.forEach(row => {
-        const priceCell = row.cells[2];
-        if (priceCell) {
-          const rawNum = priceCell.innerText.replace(/[^0-9]/g, '');
-          newTotal += parseInt(rawNum) || 0;
-        }
+      let total = 0;
+      rows.forEach(r => {
+        const val = r.cells[2].innerText.replace(/[^0-9]/g, '');
+        total += parseInt(val) || 0;
       });
-
-      document.getElementById('totalRp').innerText = `Rp ${newTotal.toLocaleString('id-ID')}`;
+      document.getElementById('totalRp').innerText = `Rp ${total.toLocaleString('id-ID')}`;
     }
 
     function switchBranch(event, branchKey, branchName) {
       document.querySelectorAll('.branch-btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
-
-      currentBranchKey = branchKey;
-      currentBranchName = branchName;
       document.getElementById('branchTitle').innerText = `LAPORAN ${branchName}`;
     }
   </script>
